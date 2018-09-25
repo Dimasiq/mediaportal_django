@@ -1,0 +1,22 @@
+{% extends "index.html" %}
+
+{% block content %}
+    <div class="container mt-4" style="min-height: 100vh">
+        <h2>Статьи из категории: {{ category.name }}</h2>
+        <hr/>
+        <div class="row">
+            {% for article in articles_from_category %}
+            <div class="col-sm-12 d-flex mb-4">
+            <div class="col-sm-4">
+                <img src="{{ article.image.url }}" alt="#" class="img-fluid"/>
+            </div>
+            <div class="col-sm-8">
+                <h2>{{ article.title }}</h2>
+                <p>{{ article.content|truncatewords:15 }}</p>
+                <a href="{{ article.get_absolute_url }}"><button class="btn btn-primary">Читать</button></a>
+            </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+{% endblock content %}

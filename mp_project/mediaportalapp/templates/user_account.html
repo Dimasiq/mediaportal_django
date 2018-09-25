@@ -1,0 +1,56 @@
+{% extends "index.html" %}
+
+{% block content %}
+
+<div class="container" style="min-height: 100vh">
+    <h3 class="text-center mt-3">Личная информация пользователя {{ current_user.user }}</h3>
+    <hr>
+    <div class="row">
+        <div class="col-sm-4">
+            <h4>Личная информация</h4>
+            <p>Логин: {{ current_user.user }}</p>
+            <p>Имя: {{ current_user.first_name }}</p>
+            <p>Фамилия: {{ current_user.last_name }}</p>
+            <p>E-mail: {{ current_user.email }}</p>
+        </div>
+        <div class="col-sm-8">
+            <h4 class="text-center"><strong>Избранные статьи</strong></h4>
+            <ul class="button-group">
+                {% for article in current_user.fav_articles.all %}
+                <li class="list-group-item list_{{ article.slug }}">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <a href="{{ article.get_absolute_url }}" style="text-decoration: none" class="text-dark">{{ article.title }}</a>
+                        <a class="article_remove" data-slug="{{ article.slug }}" href=""><button class="btn btn-danger">Удалить</button></a>        
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>        
+        </div>
+    </div>
+</div>
+
+{% endblock content %}
+
+{% block jquery %}
+<script>
+    $(document).ready(function(){
+        $('.article_remove').on('click', function(e){
+            e.preventDefault()
+            let article_slug = $(this).attr('data-slug')
+            data = {
+                article_slug: article_slug
+            }
+            $.ajax({
+                type: "GET",
+                url: "{% url 'remove_from_fav' %}",
+                dataType: 'json',
+                data: data,
+                success: function(data){
+                    $('.list_'+article_slug).css('display', 'none')
+                }
+            })
+        })
+    }) 
+    
+</script>
+{% endblock jquery %}

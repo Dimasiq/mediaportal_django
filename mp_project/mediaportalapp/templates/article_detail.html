@@ -1,0 +1,179 @@
+{% extends "index.html" %}
+{% load crispy_forms_tags %}
+{% block content %}
+
+<div class="container mt-4" style="min-height: 100vh">
+    <h1 class="text-center">{{ article.title }}</h1>
+    <hr/>
+    <p><img src="{{ article.image.url }}" style="width: 60%"></p>
+    <div class="container">
+        <div class="col-sm-12 mb-2">
+            <div class="col-sm-7 offset-sm-2">
+                {{ article.content|safe }}
+                <hr/>
+                <h4>Понравилась статья?</h4>
+                {% if not request.user.is_authenticated %}
+                <h6>Оценивать статьи могут только зарегистрированные пользователи!</h6>
+                <p>Пожалуйста, <a href="{% url 'login' %}">войдите</a>, или <a href="{% url 'registration' %}">зарегистрируйтесь</a>, 
+                    чтобы получить возможность оценивать статьи, добавлять их в избранное и писать комментарии.</p>
+                {% else %}
+                <a href="#" id="like"><i class="fa fa-thumbs-o-up" style="color: green"></i></a>
+                <span id="liked">{{ article.likes }}</span>
+                <a href="#" id="dislike" class="ml-2"><i class="fa fa-thumbs-o-down" style="color: red"></i></a>
+                <span id="disliked">{{ article.dislikes }}</span>
+                <hr/>
+                <p class="add_to_fav_{{ article.slug }}">
+                    {% if article in current_user.fav_articles.all %}
+                        <a href="#" class="article_remove" data-slug="{{ article.slug }}">
+                            <button class="btn btn-default disabled">Добавлено в избранное</button>
+                        </a>
+                    {% else %}
+                        <a href="#" class="article_add" data-slug="{{ article.slug }}">
+                            <button class="btn btn-danger">Добавить в избранное</button>
+                        </a>
+                    {% endif %}
+                {% endif %}
+                </p>
+                <p class="article_added_{{ article.slug }}"></p>
+                <h2>Комментарии:</h2>
+                {% for comment in article_comments %}
+                <div class="col-sm-12">
+                    <hr/>
+                    <small>{{ comment.author.username }}</small>
+                    <p>{{ comment.comment }}</p>
+                    <small>{{ comment.timestamp|date:'Y-m-d' }}</small>
+                </div>
+                {% empty %}
+                <strong class="empty">К данной статье еще нет комментариев :(</strong>
+                {% endfor %}
+                <div class="col-sm-12 new_comment">
+                </div>
+                <hr/>
+            </div>
+            {% if request.user.is_authenticated %}
+            <div class="col-sm-7 offset-sm-2 mb-4">
+                <form action="" method="POST">
+                    <input type="hidden" id="article" data-id="{{ article.id }}">
+                    {% csrf_token %}
+                    {{ form|crispy }}
+                    <input type="submit" value="Добавить комментарий" id="add_comment" data-toggle="modal" data-target=".bs-example-modal-sm">
+                </form>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>    
+{% endblock content %}
+
+{% block jquery %}
+<script>
+    $(document).ready(function(){
+        function getCookie(name) {
+            var cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                var cookies = document.cookie.split(';');
+                for (var i = 0; i < cookies.length; i++) {
+                    var cookie = jQuery.trim(cookies[i]);
+                    // Does this cookie string begin with the name we want?
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        var csrftoken = getCookie('csrftoken');
+        $('#add_comment').on('click', function(e){
+            e.preventDefault()
+            var article_id = $('#article').attr('data-id')
+            var comment = $('#id_comment').val()
+            data = {
+                article_id: article_id,
+                comment: comment,
+                csrfmiddlewaretoken: csrftoken
+            }
+            $.ajax({
+                type: "POST",
+                url: "{% url 'add_comment' %}",
+                dataType: "json",
+                data: data,
+                success: function(data){
+                    $.each(data, function(field){
+                        $('.new_comment').prepend('<hr/><small>'+data[field]['author']+'</small><p>'+
+                        data[field]['comment']+'</p><small>'+data[field]['timestamp']+'</small>')
+                        $('#id_comment').val('')
+                        $('.empty').html('')
+                    })
+                }
+            })
+        })
+    })
+</script>
+<script>
+    $(document).ready(function(){
+        $('#like').on('click', function(e){
+            e.preventDefault()
+            let like = 'like'
+            let article_id = $('#article').attr('data-id')
+            data = {
+                article_id: article_id,
+                like: like
+            }
+            $.ajax({
+                type: "GET",
+                url: '{% url "user_reaction" %}',
+                dataType: 'json',
+                data: data,
+                success: function(data){
+                    $('#liked').html(data.likes)
+                    $('#disliked').html(data.dislikes)
+                }
+            })
+        })
+    })
+    $(document).ready(function(){
+        $('#dislike').on('click', function(e){
+            e.preventDefault()
+            let dislike = 'dislike'
+            let article_id = $('#article').attr('data-id')
+            data = {
+                article_id: article_id,
+                dislike: dislike
+            }
+            $.ajax({
+                type: "GET",
+                url: '{% url "user_reaction" %}',
+                dataType: 'json',
+                data: data,
+                success: function(data){
+                    $('#liked').html(data.likes)
+                    $('#disliked').html(data.dislikes)
+                }
+            })
+        })
+    })
+</script>
+<script>
+    $(document).ready(function(){
+        $('.article_add').on('click', function(e){
+            e.preventDefault()
+            let article_slug = $(this).attr('data-slug')
+            data = {
+                article_slug: article_slug
+            }
+            $.ajax({
+                type: "GET",
+                url: "{% url 'add_to_fav' %}",
+                dataType: 'json',
+                data: data,
+                success: function(data){
+                    $('.article_added_'+article_slug).html('<a href="#" class="article_remove" data-slug="'+article.slug+
+                    '"><button class="btn btn-default disabled">Добавлено в избранное</button></a>')
+                    $('.add_to_fav_'+article_slug).css('display', 'none')
+                }
+            })
+        })
+    })
+</script>
+{% endblock jquery %}
